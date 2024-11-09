@@ -15,7 +15,7 @@ import google.generativeai as genai
 import openai
 
 # Set your API key here for the language translation this is from the google cloud api 
-# API_KEY = "AIzaSyBLUELtvdlQr3T5g5CU8UhN5JSBnDIXyQA"
+ API_KEY = "AIzaSyBLUELtvdlQr3T5g5CU8UhN5JSBnDIXyQA"
 
 
 
