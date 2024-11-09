@@ -187,7 +187,6 @@ def extract_files(uploaded_file):
 
 #<---------------------------------------------------------Chatbot model----------------------------->
 
-# openai.api_key = "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"
 
 # import openai
 
