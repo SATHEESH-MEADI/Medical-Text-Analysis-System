@@ -187,7 +187,7 @@ def extract_files(uploaded_file):
 
 
 #<---------------------------------------------------------Chatbot model----------------------------->
-openai.api_key = "Your Api key for chat bot "
+openai.api_key = "Your Api key for chatgpt bot "
 
 
 
