@@ -225,7 +225,10 @@ class MedicalChatbot:
 
 #<---------------------------------------------------Initialization----------------------------->
 
-# Initialize session state
+
+
+
+
 def initialize_session_state():
     for key, val in [
         ('summarizer', PubMedBERTSummarizer()),
@@ -246,55 +249,58 @@ def main():
     target_language = st.sidebar.selectbox("Select Target Language", LANGUAGES.keys(), 
                                            index=list(LANGUAGES.keys()).index(st.session_state.selected_language))
     st.session_state.selected_language = target_language
-    uploaded_file = st.file_uploader("Upload medical text file(s)", type=["txt", "zip", "pdf"])
 
-    if uploaded_file:
+    # Allow multiple file uploads
+    uploaded_files = st.file_uploader("Upload medical text file(s)", type=["txt", "zip", "pdf"], accept_multiple_files=True)
+
+    if uploaded_files:
         try:
-            text_files = extract_files(uploaded_file)
-            for text_file in text_files:
-                with open(text_file, 'r', encoding='utf-8') as f:
-                    content = f.read()
+            for file_index, uploaded_file in enumerate(uploaded_files):
+                text_files = extract_files(uploaded_file)
+                for text_index, text_file in enumerate(text_files):
+                    with open(text_file, 'r', encoding='utf-8') as f:
+                        content = f.read()
 
-                st.write(f"### Processing: {os.path.basename(text_file)}")
-                tabs = st.tabs(["Original Text", "Summary & Translation", "Q&A"])
+                    st.write(f"### Processing: {os.path.basename(text_file)}")
+                    tabs = st.tabs(["Original Text", "Summary & Translation", "Q&A"])
 
-                with tabs[0]:
-                    st.write("Original Text:")
-                    st.text(content)
+                    with tabs[0]:
+                        st.write("Original Text:")
+                        st.text(content)
 
-                with tabs[1]:
-                    st.write("PubMedBERT Summary:")
-                    summary = st.session_state.summarizer.get_pubmedbert_summary(content)
-                    st.session_state.current_summary = summary
-                    st.write(summary)
-                    
-                    if target_language != "English":
-                        translated_text = st.session_state.translator.translate_text(summary, LANGUAGES[target_language])
-                        st.session_state.translated_summary = translated_text
-                        st.write(f"Translation ({target_language}):\n{translated_text}")
-                        st.button("Copy Translation", key=f"copy_{text_file}", on_click=lambda: st.write(translated_text))
+                    with tabs[1]:
+                        st.write("PubMedBERT Summary:")
+                        summary = st.session_state.summarizer.get_pubmedbert_summary(content)
+                        st.session_state.current_summary = summary
+                        st.write(summary)
+                        
+                        if target_language != "English":
+                            translated_text = st.session_state.translator.translate_text(summary, LANGUAGES[target_language])
+                            st.session_state.translated_summary = translated_text
+                            st.write(f"Translation ({target_language}):\n{translated_text}")
+                            st.button("Copy Translation", key=f"copy_{file_index}_{text_index}", on_click=lambda: st.write(translated_text))
 
-                with tabs[2]:
-                    st.write("**Chat with the Medical Expert Bot**")
-                    
-                    # Display chat history
-                    if st.session_state.chat_history:
-                        for chat in st.session_state.chat_history:
-                            st.write(f"🤵 You: {chat['question']}")
-                            st.write(f"🤖 Bot: {chat['answer']}")
+                    with tabs[2]:
+                        st.write("**Chat with the Medical Expert Bot**")
+                        
+                        # Display chat history
+                        if st.session_state.chat_history:
+                            for chat in st.session_state.chat_history:
+                                st.write(f"🤵 You: {chat['question']}")
+                                st.write(f"🤖 Bot: {chat['answer']}")
 
-                    question = st.text_input("Enter your question:", key=f"question_{text_file}")
-                    answer_language = st.radio("Select answer language:", ["English", target_language], horizontal=True)
+                        question = st.text_input("Enter your question:", key=f"question_{file_index}_{text_index}")
+                        answer_language = st.radio("Select answer language:", ["English", target_language], horizontal=True, key=f"answer_language_{file_index}_{text_index}")
 
-                    if question:
-                        answer = st.session_state.chatbot.get_answer(question, st.session_state.current_summary)
-                        if answer_language != "English":
-                            answer = st.session_state.translator.translate_text(answer, LANGUAGES[answer_language])
-                        st.write("🤵 You:", question)
-                        st.write("🤖 Bot:", answer)
+                        if question:
+                            answer = st.session_state.chatbot.get_answer(question, st.session_state.current_summary)
+                            if answer_language != "English":
+                                answer = st.session_state.translator.translate_text(answer, LANGUAGES[answer_language])
+                            st.write("🤵 You:", question)
+                            st.write("🤖 Bot:", answer)
 
-                        # Append the question-answer pair to the chat history
-                        st.session_state.chat_history.append({"question": question, "answer": answer})
+                            # Append the question-answer pair to the chat history
+                            st.session_state.chat_history.append({"question": question, "answer": answer})
 
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
@@ -304,7 +310,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
 
