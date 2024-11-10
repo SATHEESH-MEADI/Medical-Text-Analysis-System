@@ -188,12 +188,14 @@ def extract_files(uploaded_file):
 
 #<---------------------------------------------------------Chatbot model----------------------------->
 
+API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-1B"
+headers = {"Authorization": "Bearer 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"}
 
-import openai
+# import openai
 
-# Configure OpenAI API to use Ollama's local server
-openai.api_base = 'http://localhost:11434/v1'
-openai.api_key = 'ollama'  # Placeholder key, not used by Ollama
+# # Configure OpenAI API to use Ollama's local server
+# openai.api_base = 'http://localhost:11434/v1'
+# openai.api_key = 'ollama'  # Placeholder key, not used by Ollama
 
 # Medical Chatbot class using Ollama for Q&A
 class MedicalChatbot:
@@ -310,4 +312,10 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
 
