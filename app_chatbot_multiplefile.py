@@ -187,15 +187,11 @@ def extract_files(uploaded_file):
 
 
 #<---------------------------------------------------------Chatbot model----------------------------->
+openai.api_key = "Your Api key for chat bot "
 
 
-import openai
 
-# Configure OpenAI API to use Ollama's local server
-openai.api_base = 'http://localhost:11434/v1'
-openai.api_key = 'ollama'  # Placeholder key, not used by Ollama
-
-# Medical Chatbot class using Ollama for Q&A
+# Medical Chatbot class using OpenAI for Q&A
 class MedicalChatbot:
     def __init__(self):
         self.conversation_history = []
@@ -206,12 +202,11 @@ class MedicalChatbot:
             {"role": "user", "content": f"Context: {context}\n\nQuestion: {question}"}
         ] + self.conversation_history[-3:]  # Keep only the last 3 interactions for context
 
-        # Call the Ollama model using OpenAI's compatible API structure with "llama3.2"
         response = openai.ChatCompletion.create(
-            model="llama3.2",  # Use "llama3.2" as the model name for Ollama
+            model="gpt-3.5-turbo",
             messages=messages,
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=150
         )
 
         answer = response['choices'][0]['message']['content']
@@ -225,6 +220,9 @@ class MedicalChatbot:
 
 
 
+
+
+#<---------------------------------------------------Initialization----------------------------->
 
 
 def initialize_session_state():
@@ -311,98 +309,3 @@ if __name__ == "__main__":
 
 
 #<------------------------------------------------------------------------------------------------>
-
-# # Function to extract text from PDF
-# def extract_text_from_pdf(pdf_file):
-#     text = ""
-#     pdf_document = fitz.open(pdf_file)
-#     for page_num in range(pdf_document.page_count):
-#         page = pdf_document[page_num]
-#         text += page.get_text("text")
-#     return text
-
-# # Initialize session state
-# def initialize_session_state():
-#     if 'summarizer' not in st.session_state:
-#         st.session_state.summarizer = PubMedBERTSummarizer()
-#     if 'chatbot' not in st.session_state:
-#         st.session_state.chatbot = MedicalChatbot()
-#     if 'translator' not in st.session_state:
-#         st.session_state.translator = Translator()
-#     if 'summaries' not in st.session_state:
-#         st.session_state.summaries = {}
-
-# # Main app function
-# def main():
-#     st.title("Medical Text Analysis System with Multi-File Comparison")
-#     st.write("Upload multiple medical text files (PDF, TXT, ZIP) for summarization, translation, and side-by-side Q&A comparison.")
-
-#     # Initialize session state
-#     initialize_session_state()
-
-#     # Sidebar for language selection
-#     target_language = st.sidebar.selectbox("Select Target Language", options=list(LANGUAGES.keys()))
-#     st.session_state.selected_language = target_language
-
-#     # File upload section
-#     uploaded_files = st.file_uploader("Upload multiple medical text files (PDF, TXT, ZIP)", type=["pdf", "txt", "zip"], accept_multiple_files=True)
-
-#     if uploaded_files:
-#         extract_to = "extracted_text_files"
-#         os.makedirs(extract_to, exist_ok=True)
-#         text_files = {}
-
-#         for uploaded_file in uploaded_files:
-#             if uploaded_file.name.endswith(".zip"):
-#                 with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
-#                     zip_ref.extractall(extract_to)
-#                 extracted_files = [os.path.join(root, f) for root, _, files in os.walk(extract_to) for f in files if f.endswith('.txt')]
-#                 text_files[uploaded_file.name] = extracted_files
-
-#             elif uploaded_file.name.endswith(".pdf"):
-#                 pdf_text = extract_text_from_pdf(uploaded_file)
-#                 pdf_text_path = os.path.join(extract_to, f"{uploaded_file.name}_text.txt")
-#                 with open(pdf_text_path, "w", encoding="utf-8") as f:
-#                     f.write(pdf_text)
-#                 text_files[uploaded_file.name] = [pdf_text_path]
-
-#             elif uploaded_file.name.endswith(".txt"):
-#                 file_path = os.path.join(extract_to, uploaded_file.name)
-#                 with open(file_path, "wb") as f:
-#                     f.write(uploaded_file.getbuffer())
-#                 text_files[uploaded_file.name] = [file_path]
-
-#         for filename, paths in text_files.items():
-#             for path in paths:
-#                 with open(path, 'r', encoding='utf-8') as f:
-#                     content = f.read()
-#                 summary = st.session_state.summarizer.get_pubmedbert_summary(content)
-#                 st.session_state.summaries[path] = summary
-
-#         # summaries side-by-side for comparison
-#         st.write("### Summaries Comparison")
-#         summary_cols = st.columns(len(st.session_state.summaries))
-#         for idx, (file_path, summary) in enumerate(st.session_state.summaries.items()):
-#             with summary_cols[idx]:
-#                 st.write(f"**{os.path.basename(file_path)}**")
-#                 st.write(summary)
-
-#         # Q&A comparison section
-#         st.write("### Question-Answer Comparison")
-#         question = st.text_input("Enter a question to compare answers across files:")
-#         if question:
-#             answer_cols = st.columns(len(st.session_state.summaries))
-#             for idx, (file_path, summary) in enumerate(st.session_state.summaries.items()):
-#                 with answer_cols[idx]:
-#                     answer = st.session_state.chatbot.get_answer(question, summary)
-#                     if target_language != "English":
-#                         answer = st.session_state.translator.translate_text(answer, LANGUAGES[target_language])
-#                     st.write(f"**{os.path.basename(file_path)}**")
-#                     st.write(answer)
-
-#         # Cleanup
-#         if os.path.exists(extract_to):
-#             shutil.rmtree(extract_to)
-
-# if __name__ == "__main__":
-#     main()
