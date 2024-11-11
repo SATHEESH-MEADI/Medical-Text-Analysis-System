@@ -375,11 +375,17 @@ def main():
                     translated_text = st.session_state.translator.translate_text(summary, LANGUAGES[target_language])
                     st.session_state.translated_summary = translated_text
                     st.write(f"Translation ({target_language}):\n{translated_text}")
+            # Format and display entities in "Entity - Type" format
 
             with tabs[2]:
                 st.write("Named Entity Recognition (NER):")
                 entities = st.session_state.ner.get_named_entities(text_data)
-                st.write(entities)
+                if entities:
+                    for entity, entity_type in entities:
+                        clean_entity = entity.replace("#", "")
+                        st.write(f"{clean_entity} - {entity_type}")
+                else:
+                    st.write("No Named Entities found in the text...")
 
             with tabs[3]:
                 st.write("**Chat with the Medical Expert Bot**")
