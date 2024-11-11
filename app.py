@@ -11,9 +11,9 @@ import requests
 import shutil
 import fitz  # PyMuPDF for PDF handling
 import google.generativeai as genai
-from transformers import AutoModelForCausalLM
-
 import openai
+import pandas as pd
+import plotly.express as px
 
 # Set your API key here for the language translation this is from the google cloud api 
 API_KEY = "AIzaSyBLUELtvdlQr3T5g5CU8UhN5JSBnDIXyQA"
@@ -45,6 +45,93 @@ LANGUAGES = {
     'Greek': 'el',
     'Thai': 'th'
 }
+#<---------------------------------------------------------Sentiment Analysis----------------------------->
+
+
+class SentimentAnalyzer:
+    def __init__(self):
+        self.analyzer = pipeline("sentiment-analysis")
+
+    def analyze_sentiment(self, text):
+        try:
+            # Handle empty text
+            if not text or len(text.strip()) == 0:
+                return None
+
+            # Split text into smaller chunks (to handle long texts)
+            max_length = 1000
+            chunks = [text[i:i+max_length] for i in range(0, len(text), max_length)]
+            
+            if not chunks:
+                return None
+
+            sentiments = []
+            for chunk in chunks:
+                try:
+                    result = self.analyzer(chunk)
+                    if result and len(result) > 0:
+                        sentiments.append(result[0])
+                except Exception as e:
+                    st.warning(f"Chunk analysis failed: {str(e)}")
+                    continue
+
+            if not sentiments:
+                return None
+
+            # Count sentiments
+            positive_count = sum(1 for s in sentiments if s['label'] == 'POSITIVE')
+            negative_count = sum(1 for s in sentiments if s['label'] == 'NEGATIVE')
+            neutral_count = len(sentiments) - positive_count - negative_count
+
+            total = len(sentiments)
+            if total == 0:
+                return None
+
+            # Calculate percentages
+            sentiment_scores = {
+                'positive': (positive_count / total) * 100,
+                'negative': (negative_count / total) * 100,
+                'neutral': (neutral_count / total) * 100
+            }
+
+            # Determine overall sentiment
+            max_sentiment = max(sentiment_scores.items(), key=lambda x: x[1])
+            
+            # Map sentiment to color and label
+            sentiment_mapping = {
+                'positive': {'color': 'green', 'label': 'Positive'},
+                'negative': {'color': 'red', 'label': 'Negative'},
+                'neutral': {'color': 'blue', 'label': 'Neutral'}
+            }
+
+            return {
+                'overall_sentiment': sentiment_mapping[max_sentiment[0]]['label'],
+                'color': sentiment_mapping[max_sentiment[0]]['color'],
+                'confidence': max_sentiment[1] / 100,
+                'breakdown': sentiment_scores
+            }
+
+        except Exception as e:
+            st.error(f"Sentiment analysis failed: {str(e)}")
+            return None
+
+
+
+#<--------------------------------------------------Named Entity Model----------------------------------->
+
+class MedicalNER:
+    def __init__(self):
+        self.nlp = pipeline("ner", model="d4data/biomedical-ner-all", aggregation_strategy="simple")
+
+    def get_named_entities(self, text):
+        entities = self.nlp(text)
+        return [(entity['word'], entity['entity_group']) for entity in entities]
+
+
+
+
+
+
 
 #<---------------------------------------------------------Translator----------------------------->
 class Translator:
@@ -188,14 +275,10 @@ def extract_files(uploaded_file):
 
 #<---------------------------------------------------------Chatbot model----------------------------->
 
-API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-1B"
-headers = {"Authorization": "Bearer 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"}
 
-# import openai
-
-# # Configure OpenAI API to use Ollama's local server
-# openai.api_base = 'http://localhost:11434/v1'
-# openai.api_key = 'ollama'  # Placeholder key, not used by Ollama
+# Configure OpenAI API to use Ollama's local server
+openai.api_base = 'http://localhost:11434/v1'
+openai.api_key = 'ollama'  # Placeholder key, not used by Ollama
 
 # Medical Chatbot class using Ollama for Q&A
 class MedicalChatbot:
@@ -225,17 +308,15 @@ class MedicalChatbot:
         self.conversation_history = []
 
 
-
-#<---------------------------------------------------------Initialization model----------------------------->
-
-
-
+#<---------------------------------------------------Initialization----------------------------->
 
 def initialize_session_state():
     for key, val in [
         ('summarizer', PubMedBERTSummarizer()),
         ('chatbot', MedicalChatbot()),
         ('translator', Translator()),
+        ('ner', MedicalNER()),
+        ('sentiment_analyzer', SentimentAnalyzer()),
         ('current_summary', None),
         ('translated_summary', None),
         ('selected_language', 'English'),
@@ -243,66 +324,159 @@ def initialize_session_state():
     ]:
         st.session_state.setdefault(key, val)
 
+
+
 def main():
     st.title("Medical Text Analysis System")
-    st.write("Upload medical texts for summarization, translation, and interactive Q&A")
+    st.write("Upload medical texts or enter raw text for summarization, translation, NER, and interactive Q&A")
     initialize_session_state()
 
     target_language = st.sidebar.selectbox("Select Target Language", LANGUAGES.keys(), 
                                            index=list(LANGUAGES.keys()).index(st.session_state.selected_language))
     st.session_state.selected_language = target_language
 
-    # Allow multiple file uploads
+
+
+    # Option to either upload a file or input raw text
+    st.write("### Input Options:")
     uploaded_files = st.file_uploader("Upload medical text file(s)", type=["txt", "zip", "pdf"], accept_multiple_files=True)
+    raw_text = st.text_area("Or, paste raw text here:")
 
-    if uploaded_files:
+    if uploaded_files or raw_text:
         try:
-            for file_index, uploaded_file in enumerate(uploaded_files):
-                text_files = extract_files(uploaded_file)
-                for text_index, text_file in enumerate(text_files):
-                    with open(text_file, 'r', encoding='utf-8') as f:
-                        content = f.read()
+            text_data = ""
 
-                    st.write(f"### Processing: {os.path.basename(text_file)}")
-                    tabs = st.tabs(["Original Text", "Summary & Translation", "Q&A"])
+            # Process uploaded files
+            if uploaded_files:
+                for uploaded_file in uploaded_files:
+                    text_files = extract_files(uploaded_file)
+                    for text_file in text_files:
+                        with open(text_file, 'r', encoding='utf-8') as f:
+                            text_data += f.read() + "\n"
 
-                    with tabs[0]:
-                        st.write("Original Text:")
-                        st.text(content)
+            # Use raw text if provided
+            if raw_text:
+                text_data += raw_text
 
-                    with tabs[1]:
-                        st.write("PubMedBERT Summary:")
-                        summary = st.session_state.summarizer.get_pubmedbert_summary(content)
-                        st.session_state.current_summary = summary
-                        st.write(summary)
+            st.write(f"### Processing Text")
+            tabs = st.tabs(["Original Text", "Summary & Translation", "NER", "Q&A", "Sentiment Analysis"])
+
+            with tabs[0]:
+                st.write("Original Text:")
+                st.text(text_data)
+
+            with tabs[1]:
+                st.write("PubMedBERT Summary:")
+                summary = st.session_state.summarizer.get_pubmedbert_summary(text_data)
+                st.session_state.current_summary = summary
+                st.write(summary)
+
+                if target_language != "English":
+                    translated_text = st.session_state.translator.translate_text(summary, LANGUAGES[target_language])
+                    st.session_state.translated_summary = translated_text
+                    st.write(f"Translation ({target_language}):\n{translated_text}")
+
+            with tabs[2]:
+                st.write("Named Entity Recognition (NER):")
+                entities = st.session_state.ner.get_named_entities(text_data)
+                st.write(entities)
+
+            with tabs[3]:
+                st.write("**Chat with the Medical Expert Bot**")
+                if st.session_state.chat_history:
+                    for chat in st.session_state.chat_history:
+                        st.write(f"🤵 You: {chat['question']}")
+                        st.write(f"🤖 Bot: {chat['answer']}")
+
+                question = st.text_input("Enter your question:")
+                answer_language = st.radio("Select answer language:", ["English", target_language], horizontal=True)
+
+                if question:
+                    answer = st.session_state.chatbot.get_answer(question, st.session_state.current_summary)
+                    if answer_language != "English":
+                        answer = st.session_state.translator.translate_text(answer, LANGUAGES[answer_language])
+                    st.write("🤵 You:", question)
+                    st.write("🤖 Bot:", answer)
+                    st.session_state.chat_history.append({"question": question, "answer": answer})       
+
+            with tabs[4]:
+                st.write("### Sentiment Analysis")
+                if text_data:  # Only analyze if there's text
+                    sentiment_result = st.session_state.sentiment_analyzer.analyze_sentiment(text_data)
+                    
+                    if sentiment_result:
+                        # Display overall sentiment
+                        st.markdown(
+                            f"<h3 style='color: {sentiment_result['color']}'>"
+                            f"Overall Sentiment: {sentiment_result['overall_sentiment']}</h3>",
+                            unsafe_allow_html=True
+                        )
                         
-                        if target_language != "English":
-                            translated_text = st.session_state.translator.translate_text(summary, LANGUAGES[target_language])
-                            st.session_state.translated_summary = translated_text
-                            st.write(f"Translation ({target_language}):\n{translated_text}")
-                            st.button("Copy Translation", key=f"copy_{file_index}_{text_index}", on_click=lambda: st.write(translated_text))
-
-                    with tabs[2]:
-                        st.write("**Chat with the Medical Expert Bot**")
+                        # Display confidence
+                        st.write(f"Confidence: {sentiment_result['confidence']*100:.1f}%")
                         
-                        # Display chat history
-                        if st.session_state.chat_history:
-                            for chat in st.session_state.chat_history:
-                                st.write(f"🤵 You: {chat['question']}")
-                                st.write(f"🤖 Bot: {chat['answer']}")
-
-                        question = st.text_input("Enter your question:", key=f"question_{file_index}_{text_index}")
-                        answer_language = st.radio("Select answer language:", ["English", target_language], horizontal=True, key=f"answer_language_{file_index}_{text_index}")
-
-                        if question:
-                            answer = st.session_state.chatbot.get_answer(question, st.session_state.current_summary)
-                            if answer_language != "English":
-                                answer = st.session_state.translator.translate_text(answer, LANGUAGES[answer_language])
-                            st.write("🤵 You:", question)
-                            st.write("🤖 Bot:", answer)
-
-                            # Append the question-answer pair to the chat history
-                            st.session_state.chat_history.append({"question": question, "answer": answer})
+                        # Create columns for sentiment breakdown
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.markdown(
+                                f"<p style='color: green'>Positive: "
+                                f"{sentiment_result['breakdown']['positive']:.1f}%</p>",
+                                unsafe_allow_html=True
+                            )
+                        
+                        with col2:
+                            st.markdown(
+                                f"<p style='color: red'>Negative: "
+                                f"{sentiment_result['breakdown']['negative']:.1f}%</p>",
+                                unsafe_allow_html=True
+                            )
+                        
+                        with col3:
+                            st.markdown(
+                                f"<p style='color: blue'>Neutral: "
+                                f"{sentiment_result['breakdown']['neutral']:.1f}%</p>",
+                                unsafe_allow_html=True
+                            )
+                        
+                        # Create visualization
+                        try:
+                            chart_data = pd.DataFrame({
+                                'Sentiment': ['Positive', 'Negative', 'Neutral'],
+                                'Percentage': [
+                                    sentiment_result['breakdown']['positive'],
+                                    sentiment_result['breakdown']['negative'],
+                                    sentiment_result['breakdown']['neutral']
+                                ]
+                            })
+                            
+                            fig = px.bar(
+                                chart_data,
+                                x='Sentiment',
+                                y='Percentage',
+                                color='Sentiment',
+                                color_discrete_map={
+                                    'Positive': 'green',
+                                    'Negative': 'red',
+                                    'Neutral': 'blue'
+                                }
+                            )
+                            st.plotly_chart(fig)
+                            
+                            # Add contextual message
+                            if sentiment_result['overall_sentiment'] == 'Positive':
+                                st.success("✓ The text contains predominantly positive indicators")
+                            elif sentiment_result['overall_sentiment'] == 'Negative':
+                                st.error("⚠️ The text contains significant negative elements")
+                            else:
+                                st.info("ℹ️ The text maintains a neutral tone")
+                                
+                        except Exception as e:
+                            st.warning(f"Could not create visualization: {str(e)}")
+                    else:
+                        st.warning("Could not determine sentiment for this text")
+                else:
+                    st.info("Please enter or upload text to analyze sentiment")            
 
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
@@ -310,12 +484,9 @@ def main():
             if os.path.exists("extracted_text_files"):
                 shutil.rmtree("extracted_text_files")
 
+
+
+
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
 
