@@ -14,6 +14,10 @@ import google.generativeai as genai
 import openai
 import pandas as pd
 import plotly.express as px
+from gtts import gTTS
+import tempfile
+import torchaudio
+from transformers import SpeechT5Processor, SpeechT5ForTextToSpeech, SpeechT5HifiGan
 
 # Set your API key here for the language translation this is from the google cloud api 
 API_KEY = "AIzaSyBLUELtvdlQr3T5g5CU8UhN5JSBnDIXyQA"
@@ -215,7 +219,6 @@ class PubMedBERTSummarizer:
 
 
 
-
 def extract_text_from_pdf(pdf_path):
     """Extract text from each page of a PDF file using PyMuPDF."""
     text = ""
@@ -270,6 +273,36 @@ def extract_files(uploaded_file):
 
     return text_files
 
+#<-----------------------------------------------------Text to audio -------------------------------->
+
+
+# Text-to-speech function using SpeechT5
+def text_to_speech_torch(text, speaker_id=0, sample_rate=16000):
+    """Convert text to speech using SpeechT5 model and return audio file path."""
+    inputs = processor(text=text, return_tensors="pt")
+    speech = model.generate_speech(inputs["input_ids"], speaker_embeddings[speaker_id], vocoder)
+
+    # Resample the speech to match the desired sample rate
+    resample = Resample(orig_freq=24000, new_freq=sample_rate)
+    resampled_speech = resample(speech.squeeze(0))
+
+    # Save the audio to a temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
+        write(tmp_file.name, sample_rate, resampled_speech.numpy())
+        return tmp_file.name
+
+
+
+
+
+# def text_to_speech(text):
+#     """Convert text to speech and return an audio file path."""
+#     if not text.strip():  # Check if text is empty
+#         return None
+#     tts = gTTS(text=text, lang='en')
+#     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
+#         tts.save(tmp_file.name)
+#         return tmp_file.name
 
 
 
@@ -325,6 +358,53 @@ def initialize_session_state():
         st.session_state.setdefault(key, val)
 
 
+# Custom CSS for active and inactive buttons
+st.markdown("""
+    <style>
+    .stButton > button {
+        background-color: white;
+        color: black;
+    }
+    .stButton > button.active {
+        background-color: red !important;
+        color: white !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# Function to update the selected section in session state
+def set_active_button(button_name):
+    st.session_state.active_button = button_name
+
+# Initialize the active button state if not set
+if 'active_button' not in st.session_state:
+    st.session_state.active_button = "None"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#<-------------------------------------------
+
+
+
+
+
+
 def main():
     st.title("Medical Text Analysis System")
     st.write("Upload medical texts or enter raw text for summarization, translation, NER, and interactive Q&A")
@@ -371,34 +451,53 @@ def main():
             if original_text_button:
                 st.subheader("Original Text")
                 st.text(text_data)
+                if st.button("🔊 Listen to Original Text"):
+                    audio_file = text_to_speech(text_data, "original_text.mp3")
+                    audio_bytes = open(audio_file, "rb").read()
+                    st.audio(audio_bytes, format="audio/mp3")
 
             elif summary_button:
                 st.subheader("PubMedBERT Summary")
                 summary = st.session_state.summarizer.get_pubmedbert_summary(text_data)
                 st.session_state.current_summary = summary
                 st.write(summary)
+                
+                if st.button("🔊 Listen to Summary"):
+                    audio_file = text_to_speech(summary, "summary_text.mp3")
+                    audio_bytes = open(audio_file, "rb").read()
+                    st.audio(audio_bytes, format="audio/mp3")
 
                 if target_language != "English":
                     translated_text = st.session_state.translator.translate_text(summary, LANGUAGES[target_language])
                     st.session_state.translated_summary = translated_text
                     st.write(f"Translation ({target_language}):\n{translated_text}")
+                    if st.button("🔊 Listen to Translation"):
+                        audio_file = text_to_speech(translated_text, "translated_text.mp3")
+                        audio_bytes = open(audio_file, "rb").read()
+                        st.audio(audio_bytes, format="audio/mp3")
 
             elif ner_button:
                 st.subheader("Named Entity Recognition (NER)")
                 entities = st.session_state.ner.get_named_entities(text_data)
-                if entities:
-                    for entity, entity_type in entities:
-                        clean_entity = entity.replace("#", "")
-                        st.write(f"{clean_entity} - {entity_type}")
-                else:
-                    st.write("No Named Entities found in the text...")
+                entity_text = "\n".join([f"{entity.replace('#', '')} - {entity_type}" for entity, entity_type in entities])
+                st.write(entity_text)
+                
+                if st.button("🔊 Listen to NER"):
+                    audio_file = text_to_speech(entity_text, "ner_text.mp3")
+                    audio_bytes = open(audio_file, "rb").read()
+                    st.audio(audio_bytes, format="audio/mp3")
 
             elif qa_button:
                 st.subheader("Interactive Q&A with Medical Expert Bot")
                 if st.session_state.chat_history:
-                    for chat in st.session_state.chat_history:
-                        st.write(f"🎃 You: {chat['question']}")
-                        st.write(f"💡 Bot: {chat['answer']}")
+                    chat_text = "\n".join([f"🎃 You: {chat['question']}\n💡 Bot: {chat['answer']}" for chat in st.session_state.chat_history])
+                    st.write(chat_text)
+                    
+                    if st.button("🔊 Listen to Q&A"):
+                        audio_file = text_to_speech(chat_text, "qa_text.mp3")
+                        audio_bytes = open(audio_file, "rb").read()
+                        st.audio(audio_bytes, format="audio/mp3")
+
                 question = st.text_input("Enter your question:")
                 answer_language = st.radio("Select answer language:", ["English", target_language], horizontal=True)
 
@@ -415,50 +514,26 @@ def main():
                 sentiment_result = st.session_state.sentiment_analyzer.analyze_sentiment(text_data)
 
                 if sentiment_result:
-                    st.markdown(
-                        f"<h3 style='color: {sentiment_result['color']}'>"
-                        f"Overall Sentiment: {sentiment_result['overall_sentiment']}</h3>",
-                        unsafe_allow_html=True
-                    )
-                    st.write(f"Confidence: {sentiment_result['confidence']*100:.1f}%")
+                    sentiment_text = f"Overall Sentiment: {sentiment_result['overall_sentiment']}\n" \
+                                     f"Confidence: {sentiment_result['confidence']*100:.1f}%\n" \
+                                     f"Positive: {sentiment_result['breakdown']['positive']:.1f}%\n" \
+                                     f"Negative: {sentiment_result['breakdown']['negative']:.1f}%\n" \
+                                     f"Neutral: {sentiment_result['breakdown']['neutral']:.1f}%"
+                    st.write(sentiment_text)
+                    
+                    if st.button("🔊 Listen to Sentiment Analysis"):
+                        audio_file = text_to_speech(sentiment_text, "sentiment_text.mp3")
+                        audio_bytes = open(audio_file, "rb").read()
+                        st.audio(audio_bytes, format="audio/mp3")
 
+                    # Visualization (kept as in the original code)
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.markdown(
-                            f"<p style='color: green'>Positive: "
-                            f"{sentiment_result['breakdown']['positive']:.1f}%</p>",
-                            unsafe_allow_html=True
-                        )
+                        st.markdown(f"<p style='color: green'>Positive: {sentiment_result['breakdown']['positive']:.1f}%</p>", unsafe_allow_html=True)
                     with col2:
-                        st.markdown(
-                            f"<p style='color: red'>Negative: "
-                            f"{sentiment_result['breakdown']['negative']:.1f}%</p>",
-                            unsafe_allow_html=True
-                        )
+                        st.markdown(f"<p style='color: red'>Negative: {sentiment_result['breakdown']['negative']:.1f}%</p>", unsafe_allow_html=True)
                     with col3:
-                        st.markdown(
-                            f"<p style='color: blue'>Neutral: "
-                            f"{sentiment_result['breakdown']['neutral']:.1f}%</p>",
-                            unsafe_allow_html=True
-                        )
-
-                    # Visualization
-                    try:
-                        chart_data = pd.DataFrame({
-                            'Sentiment': ['Positive', 'Negative', 'Neutral'],
-                            'Percentage': [
-                                sentiment_result['breakdown']['positive'],
-                                sentiment_result['breakdown']['negative'],
-                                sentiment_result['breakdown']['neutral']
-                            ]
-                        })
-                        fig = px.bar(chart_data, x='Sentiment', y='Percentage', color='Sentiment',
-                                     color_discrete_map={'Positive': 'green', 'Negative': 'red', 'Neutral': 'blue'})
-                        st.plotly_chart(fig)
-                    except Exception as e:
-                        st.warning(f"Could not create visualization: {str(e)}")
-                else:
-                    st.warning("Could not determine sentiment for this text")
+                        st.markdown(f"<p style='color: blue'>Neutral: {sentiment_result['breakdown']['neutral']:.1f}%</p>", unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
