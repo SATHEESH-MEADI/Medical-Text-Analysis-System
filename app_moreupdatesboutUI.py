@@ -15,8 +15,6 @@ import openai
 import pandas as pd
 import plotly.express as px
 
-
-
 # Set your API key here for the language translation this is from the google cloud api 
 API_KEY = "AIzaSyBLUELtvdlQr3T5g5CU8UhN5JSBnDIXyQA"
 
@@ -50,19 +48,9 @@ LANGUAGES = {
 #<---------------------------------------------------------Sentiment Analysis----------------------------->
 
 
-
-from transformers import pipeline
-import streamlit as st
-
 class SentimentAnalyzer:
     def __init__(self):
-        # Initialize the sentiment pipeline with the specified model and GPU support
-        self.analyzer = pipeline(
-            "sentiment-analysis",
-            model="distilbert/distilbert-base-uncased-finetuned-sst-2-english",
-            revision="714eb0f",  # Explicitly specify the model revision
-            device=0  # Use GPU if available, otherwise defaults to CPU
-        )
+        self.analyzer = pipeline("sentiment-analysis")
 
     def analyze_sentiment(self, text):
         try:
@@ -126,8 +114,6 @@ class SentimentAnalyzer:
         except Exception as e:
             st.error(f"Sentiment analysis failed: {str(e)}")
             return None
-
-
 
 
 
@@ -287,68 +273,7 @@ def extract_files(uploaded_file):
 
 
 
-#<---------------------------------------------------------Chatbot model  with api key from the hugging face----------------------------->
-
-
-
-
-# # Medical Chatbot class using Hugging Face Inference API
-# class MedicalChatbot:
-#     def __init__(self):
-#         # Configure the Hugging Face Inference API
-#         self.API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-1B"
-#         self.headers = {"Authorization": "Bearer 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"}
-#         self.conversation_history = []
-
-#     def query(self, payload):
-#         try:
-#             # Send a POST request to the Hugging Face API
-#             response = requests.post(self.API_URL, headers=self.headers, json=payload)
-#             response.raise_for_status()  # Raise an exception for HTTP errors
-#             return response.json()
-#         except requests.exceptions.HTTPError as http_err:
-#             st.error(f"HTTP error occurred: {http_err}")
-#         except requests.exceptions.ConnectionError:
-#             st.error("Failed to connect to the Hugging Face API. Check your internet connection.")
-#         except requests.exceptions.Timeout:
-#             st.error("The request timed out. Try again later.")
-#         except requests.exceptions.RequestException as req_err:
-#             st.error(f"An error occurred: {req_err}")
-#         return {"error": "API call failed"}
-
-#     def get_answer(self, question, context):
-#         # Prepare the payload with context and question
-#         payload = {
-#             "inputs": f"Context: {context}\n\nQuestion: {question}",
-#             "parameters": {
-#                 "temperature": 0.5,  # Adjust temperature for creativity
-#                 "max_length": 1000,  # Adjust maximum response length
-#             },
-#         }
-
-#         # Query the API and process the response
-#         api_response = self.query(payload)
-#         if "generated_text" in api_response:
-#             answer = api_response["generated_text"]
-#         else:
-#             answer = "Sorry, I could not process your question."
-
-#         # Update conversation history
-#         self.conversation_history.append({"role": "user", "content": question})
-#         self.conversation_history.append({"role": "assistant", "content": answer})
-#         return answer
-
-#     def clear_history(self):
-#         # Clear the conversation history
-#         self.conversation_history = []
-
-
-
-
-#<---------------------------------------------------------Chatbot model  with Local host running the Ollama in terminal----------------------------->
-
-
-
+#<---------------------------------------------------------Chatbot model----------------------------->
 
 
 # Configure OpenAI API to use Ollama's local server
@@ -400,102 +325,30 @@ def initialize_session_state():
         st.session_state.setdefault(key, val)
 
 
-
-
-#<----------------------------------Main Function ----------------------------->
-
-
-
-
-
 def main():
     st.title("Medical Text Analysis System")
-    st.write("📂 **Upload your medical text file** or ✍️ **enter raw text** using the options in the left sidebar.")
-    st.write(" 🛠️ Use features like summarization, translation, NER, and interactive Q&A!")
-
+    st.write("Upload medical texts or enter raw text for summarization, translation, NER, and interactive Q&A")
     initialize_session_state()
 
-    # Sidebar for language selection
-    target_language = st.sidebar.selectbox(
-        "🌐 Select Target Language",
-        LANGUAGES.keys(),
-        index=list(LANGUAGES.keys()).index(st.session_state.selected_language)
-    )
+    # Language selection in the sidebar
+    target_language = st.sidebar.selectbox("Select Target Language", LANGUAGES.keys(), 
+                                           index=list(LANGUAGES.keys()).index(st.session_state.selected_language))
     st.session_state.selected_language = target_language
-
-
-
-    # Add custom CSS for button styles
-    st.sidebar.markdown(
-        """
-        <style>
-        .button-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .button {
-            background-color: white;
-            color: black;
-            border: 2px solid #ccc;
-            border-radius: 5px;
-            padding: 10px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        .button:hover {
-            background-color: orange;
-            color: white;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-
-
-
-
-
-    # Initialize session state for selected feature
-    if "selected_option" not in st.session_state:
-        st.session_state.selected_option = "Original Text"
-
-
-
 
     # Sidebar buttons for different functionalities
     st.sidebar.title("Analysis Options")
-    original_text_button = st.sidebar.button("📜 Original Text")
-    summary_button = st.sidebar.button("📝 Summary & Translation")
-    ner_button = st.sidebar.button("🔍 Named Entity Recognition")
-    qa_button = st.sidebar.button("💬 Interactive Q&A")
-    sentiment_button = st.sidebar.button("📊 Sentiment Analysis")
+    original_text_button = st.sidebar.button("Original Text")
+    summary_button = st.sidebar.button("Summary & Translation")
+    ner_button = st.sidebar.button("Named Entity Recognition")
+    qa_button = st.sidebar.button("Interactive Q&A")
+    sentiment_button = st.sidebar.button("Sentiment Analysis")
 
-    # Set the selected option based on button click
-    if original_text_button:
-        st.session_state.selected_option = "Original Text"
-    elif summary_button:
-        st.session_state.selected_option = "Summary & Translation"
-    elif ner_button:
-        st.session_state.selected_option = "NER"
-    elif qa_button:
-        st.session_state.selected_option = "Q&A"
-    elif sentiment_button:
-        st.session_state.selected_option = "Sentiment Analysis"
+    # Option to either upload a file or input raw text
+    st.write("### Input Options:")
+    uploaded_files = st.file_uploader("Upload medical text file(s)", type=["txt", "zip", "pdf"], accept_multiple_files=True)
+    raw_text = st.text_area("Or, paste raw text here:")
 
-    # Input Options
-    uploaded_files = st.sidebar.file_uploader(
-        "Upload medical text file(s)",
-        type=["txt", "zip", "pdf"],
-        accept_multiple_files=True
-    )
-    raw_text = st.sidebar.text_area("Or, paste raw text here:")
-
-    # Process user inputs and render the selected analysis
+    # Processing text if files or raw text are provided
     if uploaded_files or raw_text:
         try:
             text_data = ""
@@ -512,19 +365,15 @@ def main():
             if raw_text:
                 text_data += raw_text
 
-            st.write(f"### Processing Text")
+            st.write("### Processing Text")
 
-            # Render content based on selected option
-            if st.session_state.selected_option == "Original Text":
-                st.write("Original Text:")
+            # Display the selected option based on button clicks
+            if original_text_button:
+                st.subheader("Original Text")
                 st.text(text_data)
 
-
-
-
-
-            elif st.session_state.selected_option == "Summary & Translation":
-                st.write("📝 **PubMedBERT Summary:**")
+            elif summary_button:
+                st.subheader("PubMedBERT Summary")
                 summary = st.session_state.summarizer.get_pubmedbert_summary(text_data)
                 st.session_state.current_summary = summary
                 st.write(summary)
@@ -534,12 +383,8 @@ def main():
                     st.session_state.translated_summary = translated_text
                     st.write(f"Translation ({target_language}):\n{translated_text}")
 
-
-
-
-
-            elif st.session_state.selected_option == "NER":
-                st.write("🔍 **Named Entity Recognition (NER)**")
+            elif ner_button:
+                st.subheader("Named Entity Recognition (NER)")
                 entities = st.session_state.ner.get_named_entities(text_data)
                 if entities:
                     for entity, entity_type in entities:
@@ -547,13 +392,13 @@ def main():
                         st.write(f"{clean_entity} - {entity_type}")
                 else:
                     st.write("No Named Entities found in the text...")
-            elif st.session_state.selected_option == "Q&A":
-                st.write("💬**Chat with the Medical Expert Bot**")
+
+            elif qa_button:
+                st.subheader("Interactive Q&A with Medical Expert Bot")
                 if st.session_state.chat_history:
                     for chat in st.session_state.chat_history:
                         st.write(f"🎃 You: {chat['question']}")
                         st.write(f"💡 Bot: {chat['answer']}")
-
                 question = st.text_input("Enter your question:")
                 answer_language = st.radio("Select answer language:", ["English", target_language], horizontal=True)
 
@@ -565,38 +410,40 @@ def main():
                     st.write("💡 Bot:", answer)
                     st.session_state.chat_history.append({"question": question, "answer": answer})
 
-            elif st.session_state.selected_option == "Sentiment Analysis":
-                st.write("📊**Sentiment Analysis**")
-                if text_data:
-                    sentiment_result = st.session_state.sentiment_analyzer.analyze_sentiment(text_data)
-                    if sentiment_result:
+            elif sentiment_button:
+                st.subheader("Sentiment Analysis")
+                sentiment_result = st.session_state.sentiment_analyzer.analyze_sentiment(text_data)
+
+                if sentiment_result:
+                    st.markdown(
+                        f"<h3 style='color: {sentiment_result['color']}'>"
+                        f"Overall Sentiment: {sentiment_result['overall_sentiment']}</h3>",
+                        unsafe_allow_html=True
+                    )
+                    st.write(f"Confidence: {sentiment_result['confidence']*100:.1f}%")
+
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
                         st.markdown(
-                            f"<h3 style='color: {sentiment_result['color']}'>"
-                            f"Overall Sentiment: {sentiment_result['overall_sentiment']}</h3>",
+                            f"<p style='color: green'>Positive: "
+                            f"{sentiment_result['breakdown']['positive']:.1f}%</p>",
                             unsafe_allow_html=True
                         )
-                        st.write(f"Confidence: {sentiment_result['confidence']*100:.1f}%")
+                    with col2:
+                        st.markdown(
+                            f"<p style='color: red'>Negative: "
+                            f"{sentiment_result['breakdown']['negative']:.1f}%</p>",
+                            unsafe_allow_html=True
+                        )
+                    with col3:
+                        st.markdown(
+                            f"<p style='color: blue'>Neutral: "
+                            f"{sentiment_result['breakdown']['neutral']:.1f}%</p>",
+                            unsafe_allow_html=True
+                        )
 
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.markdown(
-                                f"<p style='color: green'>Positive: "
-                                f"{sentiment_result['breakdown']['positive']:.1f}%</p>",
-                                unsafe_allow_html=True
-                            )
-                        with col2:
-                            st.markdown(
-                                f"<p style='color: red'>Negative: "
-                                f"{sentiment_result['breakdown']['negative']:.1f}%</p>",
-                                unsafe_allow_html=True
-                            )
-                        with col3:
-                            st.markdown(
-                                f"<p style='color: blue'>Neutral: "
-                                f"{sentiment_result['breakdown']['neutral']:.1f}%</p>",
-                                unsafe_allow_html=True
-                            )
-
+                    # Visualization
+                    try:
                         chart_data = pd.DataFrame({
                             'Sentiment': ['Positive', 'Negative', 'Neutral'],
                             'Percentage': [
@@ -605,30 +452,13 @@ def main():
                                 sentiment_result['breakdown']['neutral']
                             ]
                         })
-
-                        fig = px.bar(
-                            chart_data,
-                            x='Sentiment',
-                            y='Percentage',
-                            color='Sentiment',
-                            color_discrete_map={
-                                'Positive': 'green',
-                                'Negative': 'red',
-                                'Neutral': 'blue'
-                            }
-                        )
+                        fig = px.bar(chart_data, x='Sentiment', y='Percentage', color='Sentiment',
+                                     color_discrete_map={'Positive': 'green', 'Negative': 'red', 'Neutral': 'blue'})
                         st.plotly_chart(fig)
-
-                        if sentiment_result['overall_sentiment'] == 'Positive':
-                            st.success("✓ The text contains predominantly positive indicators")
-                        elif sentiment_result['overall_sentiment'] == 'Negative':
-                            st.error("⚠️ The text contains significant negative elements")
-                        else:
-                            st.info("ℹ️ The text maintains a neutral tone")
-                    else:
-                        st.warning("Could not determine sentiment for this text")
+                    except Exception as e:
+                        st.warning(f"Could not create visualization: {str(e)}")
                 else:
-                    st.info("Please enter or upload text to analyze sentiment")
+                    st.warning("Could not determine sentiment for this text")
 
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
@@ -639,4 +469,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
