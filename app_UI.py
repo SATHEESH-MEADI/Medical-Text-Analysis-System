@@ -15,8 +15,6 @@ import openai
 import pandas as pd
 import plotly.express as px
 
-
-
 # Set your API key here for the language translation this is from the google cloud api 
 API_KEY = "AIzaSyBLUELtvdlQr3T5g5CU8UhN5JSBnDIXyQA"
 
@@ -287,68 +285,7 @@ def extract_files(uploaded_file):
 
 
 
-#<---------------------------------------------------------Chatbot model  with api key from the hugging face----------------------------->
-
-
-
-
-# # Medical Chatbot class using Hugging Face Inference API
-# class MedicalChatbot:
-#     def __init__(self):
-#         # Configure the Hugging Face Inference API
-#         self.API_URL = "https://api-inference.huggingface.co/models/meta-llama/Llama-3.2-1B"
-#         self.headers = {"Authorization": "Bearer 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"}
-#         self.conversation_history = []
-
-#     def query(self, payload):
-#         try:
-#             # Send a POST request to the Hugging Face API
-#             response = requests.post(self.API_URL, headers=self.headers, json=payload)
-#             response.raise_for_status()  # Raise an exception for HTTP errors
-#             return response.json()
-#         except requests.exceptions.HTTPError as http_err:
-#             st.error(f"HTTP error occurred: {http_err}")
-#         except requests.exceptions.ConnectionError:
-#             st.error("Failed to connect to the Hugging Face API. Check your internet connection.")
-#         except requests.exceptions.Timeout:
-#             st.error("The request timed out. Try again later.")
-#         except requests.exceptions.RequestException as req_err:
-#             st.error(f"An error occurred: {req_err}")
-#         return {"error": "API call failed"}
-
-#     def get_answer(self, question, context):
-#         # Prepare the payload with context and question
-#         payload = {
-#             "inputs": f"Context: {context}\n\nQuestion: {question}",
-#             "parameters": {
-#                 "temperature": 0.5,  # Adjust temperature for creativity
-#                 "max_length": 1000,  # Adjust maximum response length
-#             },
-#         }
-
-#         # Query the API and process the response
-#         api_response = self.query(payload)
-#         if "generated_text" in api_response:
-#             answer = api_response["generated_text"]
-#         else:
-#             answer = "Sorry, I could not process your question."
-
-#         # Update conversation history
-#         self.conversation_history.append({"role": "user", "content": question})
-#         self.conversation_history.append({"role": "assistant", "content": answer})
-#         return answer
-
-#     def clear_history(self):
-#         # Clear the conversation history
-#         self.conversation_history = []
-
-
-
-
-#<---------------------------------------------------------Chatbot model  with Local host running the Ollama in terminal----------------------------->
-
-
-
+#<---------------------------------------------------------Chatbot model----------------------------->
 
 
 # Configure OpenAI API to use Ollama's local server
