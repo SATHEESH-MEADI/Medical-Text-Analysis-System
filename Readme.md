@@ -99,7 +99,7 @@ With a sleek and interactive user interface built using **Streamlit**, Medi Text
 
 1. **Clone the Repository**  
    ```bash
-   [git clone https://github.com/your-repo/medi-text-summarizer.git](https://github.com/SATHEESH-MEADI/MediText-Summarizer.git)
+   git clone https://github.com/SATHEESH-MEADI/MediText-Summarizer.git
    cd medi-text-summarizer
    ```
 
