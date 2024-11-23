@@ -1,3 +1,28 @@
+'''
+Instructions for Running the Project
+
+Requirements:
+1. Google API: The project uses Google API for the Translation feature. Ensure the API key is correctly configured.
+2. Ollama (Chatbot Feature):  
+   - Download and set up Ollama 3.2 from [Ollama's website](https://ollama.com).  
+   - Ensure it is running in the background and note the port number it is listening on.  
+   - Update the local port configuration in the `chat_medical_chatbot` function.  
+3. Packages: Ensure the terminal has all necessary packages installed, including `torch`, `fitz`, and `Streamlit`.
+
+Running the Application:
+Execute the command:  bash
+
+streamlit run app.py
+
+
+This will launch the project webpage.
+
+
+'''
+
+
+
+
 import streamlit as st
 import zipfile
 import os
