@@ -137,19 +137,11 @@ This project is licensed under the **MIT License**. Feel free to use, modify, an
 
 ---
 
-## 👩‍💻 Author  
+## 👨‍💻 Author  
 
 **Satheesh Meadi**  
 Master's Student in Data Science | NLP Enthusiast  
 📧 Email: smeadi1@umbc.edu  
 🌐 GitHub: [GitHub](https://github.com/SATHEESH-MEADI)  
 📚 LinkedIn: [Satheesh Meadi](https://www.linkedin.com/in/satheesh-meadi/)  
-
-
-
-
-
-
-
-
 
