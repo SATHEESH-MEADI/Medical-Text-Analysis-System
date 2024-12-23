@@ -1,5 +1,5 @@
 
-# 📚 Medi Text Summarizer
+# 📚 Medical Text Analysis System
 
 ## 📌 Table of Contents  
 
@@ -19,7 +19,7 @@
 
 ## 📝 Introduction  
 
-**Medi Text Summarizer** is an advanced text processing and analysis tool designed to make understanding medical literature effortless. Whether it's summarizing large documents, translating text into multiple languages, extracting named entities, or analyzing sentiment, this application leverages cutting-edge AI models to provide precise results.  
+**Medical Text Analysis System** is an advanced text processing and analysis tool designed to make understanding medical literature effortless. Whether it's summarizing large documents, translating text into multiple languages, extracting named entities, or analyzing sentiment, this application leverages cutting-edge AI models to provide precise results.  
 
 With a sleek and interactive user interface built using **Streamlit**, Medi Text Summarizer transforms the way users interact with medical text, making it more accessible, insightful, and actionable.  
 
